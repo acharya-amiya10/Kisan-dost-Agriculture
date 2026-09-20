@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID" },
+        "displayName": { "type": "string", "description": "User's display name" },
+        "email": { "type": "string", "description": "User's email address" },
+        "language": { "type": "string", "description": "Preferred language" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User role" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "A record of farming expenses",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner's user ID" },
+        "date": { "type": "string", "format": "date-time", "description": "Date of expense" },
+        "category": { "type": "string", "enum": ["Seeds", "Fertilizer", "Pesticide", "Labor", "Fuel", "Other"], "description": "Expense category" },
+        "amount": { "type": "number", "description": "Amount spent" },
+        "description": { "type": "string", "description": "Details of the expense" }
+      },
+      "required": ["uid", "date", "category", "amount"]
+    },
+    "CropDiagnosis": {
+      "title": "CropDiagnosis",
+      "description": "A record of AI crop diagnosis",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User's ID" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the diagnosis was made" },
+        "query": { "type": "string", "description": "User's query" },
+        "diagnosis": { "type": "string", "description": "AI's diagnosis result" },
+        "imageUrl": { "type": "string", "description": "URL of the uploaded image (if applicable)" }
+      },
+      "required": ["uid", "timestamp", "diagnosis"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Farming expense records"
+    },
+    "/diagnoses/{diagnosisId}": {
+      "schema": "CropDiagnosis",
+      "description": "History of crop diagnoses"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Kisan-Dost: Agricultural AI Expert",
+  "description": "A specialized AI advisor for Indian farmers providing climate-smart advice on crops, fertilizers, and pest control in multiple regional languages with audio support.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}

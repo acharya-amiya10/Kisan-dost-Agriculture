@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (UID)
+    // Fields:
+    //   - uid: string (required)
+    //   - displayName: string (optional)
+    //   - email: string (required)
+    //   - language: string (optional)
+    //   - role: string (required, 'user' or 'admin')
+    //
+    // Collection: expenses
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required)
+    //   - date: string (required, ISO 8601)
+    //   - category: string (required, enum)
+    //   - amount: number (required, positive)
+    //   - description: string (optional)
+    //
+    // Collection: diagnoses
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required)
+    //   - timestamp: string (required, ISO 8601)
+    //   - query: string (optional)
+    //   - diagnosis: string (required)
+    //   - imageUrl: string (optional)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "amiyaacharya96@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() > 0 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['user', 'admin'] &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100));
+    }
+
+    function isValidExpense(data) {
+      return data.uid == request.auth.uid &&
+             isValidDateString(data.date) &&
+             data.category in ['Seeds', 'Fertilizer', 'Pesticide', 'Labor', 'Fuel', 'Other'] &&
+             data.amount is number && data.amount > 0 &&
+             (!('description' in data) || (data.description is string && data.description.size() < 500));
+    }
+
+    function isValidDiagnosis(data) {
+      return data.uid == request.auth.uid &&
+             isValidDateString(data.timestamp) &&
+             data.diagnosis is string && data.diagnosis.size() > 0 &&
+             (!('query' in data) || (data.query is string && data.query.size() < 5000)) &&
+             (!('imageUrl' in data) || (data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() < 1000000)));
+    }
+
+    // Match Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) && request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+    }
+
+    match /expenses/{expenseId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidExpense(request.resource.data);
+      allow update: if isAuthenticated() && isDocOwner() && isValidExpense(request.resource.data);
+      allow delete: if isAuthenticated() && isDocOwner() || isAdmin();
+    }
+
+    match /diagnoses/{diagnosisId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidDiagnosis(request.resource.data);
+      allow delete: if isAuthenticated() && isDocOwner() || isAdmin();
+    }
+  }
+}
